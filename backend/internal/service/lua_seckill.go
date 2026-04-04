@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	rds "coupon-seckill-system/internal/infra/redis"
 
 	"github.com/redis/go-redis/v9"
 )
+
+var soldOutCache sync.Map
 
 var seckillScript = redis.NewScript(`
 local metaKey = KEYS[1]
@@ -67,7 +70,7 @@ func EvalSeckill(couponID, userID int64) (int, error) {
 		return 5, ErrRedisUnavailable
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	metaKey := fmt.Sprintf("coupon:meta:%d", couponID)
@@ -82,10 +85,7 @@ func EvalSeckill(couponID, userID int64) (int, error) {
 	switch v := res.(type) {
 	case int64:
 		return int(v), nil
-	case string:
-		return 5, errors.New("unexpected lua result type")
 	default:
 		return 5, errors.New("unexpected lua result type")
 	}
 }
-

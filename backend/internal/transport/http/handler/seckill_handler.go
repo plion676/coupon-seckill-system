@@ -22,11 +22,12 @@ func SeckillHandler(c *gin.Context) {
 			"msg": "invalid user_id"})
 		return
 	}
+
 	err = service.Seckill(couponID, userID)
 	switch {
 	case err == nil:
 		c.JSON(200, gin.H{
-			"msg": "ok"})
+			"msg": "抢购中"})
 	case errors.Is(err, service.ErrNotStarted):
 		c.JSON(400, gin.H{
 			"msg": "not started"})
@@ -39,6 +40,9 @@ func SeckillHandler(c *gin.Context) {
 	case errors.Is(err, service.ErrDuplicateOrder):
 		c.JSON(409, gin.H{
 			"msg": "duplicate"})
+	case errors.Is(err, service.ErrRedisUnavailable):
+		c.JSON(409, gin.H{
+			"msg": "redis unavailable"})
 	default:
 		c.JSON(500, gin.H{
 			"msg": "server error"})

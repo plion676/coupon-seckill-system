@@ -59,11 +59,12 @@ func CreateCoupon(c *gin.Context) {
 	err = service.GetCouponStock(coupon.ID)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "stockpreheat failed"})
-
+		return
 	}
 	_, _, err = service.GetCouponMeta(coupon.ID)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "metapreheat failed"})
+		return
 	}
 
 	c.JSON(200, gin.H{"coupon_id": coupon.ID})
