@@ -18,9 +18,11 @@ var seckillScript = redis.NewScript(`
 local metaKey = KEYS[1]
 local stockKey = KEYS[2]
 local usersKey = KEYS[3]
+local streamKey = "seckill:stream" 
 
 local nowUnix = tonumber(ARGV[1])
 local userId = ARGV[2]
+local couponId = ARGV[3] 
 
 local startUnix = redis.call("HGET", metaKey, "start_unix")
 local endUnix = redis.call("HGET", metaKey, "end_unix")
@@ -62,6 +64,7 @@ if newStock < 0 then
 end
 
 redis.call("SADD", usersKey, userId)
+redis.call("XADD", streamKey, "*", "coupon_id", couponId, "user_id", userId)
 return 0
 `)
 
@@ -77,7 +80,7 @@ func EvalSeckill(couponID, userID int64) (int, error) {
 	stockKey := fmt.Sprintf("coupon:stock:%d", couponID)
 	usersKey := fmt.Sprintf("coupon:users:%d", couponID)
 
-	res, err := seckillScript.Run(ctx, rds.RDB, []string{metaKey, stockKey, usersKey}, time.Now().Unix(), userID).Result()
+	res, err := seckillScript.Run(ctx, rds.RDB, []string{metaKey, stockKey, usersKey}, time.Now().Unix(), userID, couponID).Result()
 	if err != nil {
 		return 5, err
 	}

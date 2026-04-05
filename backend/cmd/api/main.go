@@ -11,7 +11,8 @@ import (
 func main() {
 	mysql.Connect()
 	rds.ConnectRedis()
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
 
 	r.POST("/coupon/create", handler.CreateCoupon)
 	r.POST("/seckill", handler.SeckillHandler)

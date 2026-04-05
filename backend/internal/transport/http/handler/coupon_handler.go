@@ -19,6 +19,7 @@ type CreateCouponReq struct {
 
 func CreateCoupon(c *gin.Context) {
 	var req CreateCouponReq
+	//c.ShouldBindJSON将接口传的json反序列化后写进req
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
 			"msg": "bad request",
