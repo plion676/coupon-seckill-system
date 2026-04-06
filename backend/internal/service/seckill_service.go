@@ -11,6 +11,8 @@ func Seckill(couponID, userID int64) error {
 
 	switch code {
 	case 0:
+		var seckillMessage = SeckillMessage{CouponID: couponID, UserID: userID}
+		return DispatchSeckillMessage(seckillMessage)
 	case 1:
 		soldOutCache.Store(couponID, true)
 		return ErrNoStock

@@ -43,6 +43,9 @@ func SeckillHandler(c *gin.Context) {
 	case errors.Is(err, service.ErrRedisUnavailable):
 		c.JSON(409, gin.H{
 			"msg": "redis unavailable"})
+	case errors.Is(err, service.ErrServerBusy):
+		c.JSON(409, gin.H{
+			"msg": "serve busy"})
 	default:
 		c.JSON(500, gin.H{
 			"msg": "server error"})

@@ -13,7 +13,7 @@ func ConnectRedis() {
 		Addr:     "127.0.0.1:6379",
 		Password: "",
 		DB:       0,
-		PoolSize: 1500,
+		PoolSize: 500,
 	})
 
 	ctx := context.Background()

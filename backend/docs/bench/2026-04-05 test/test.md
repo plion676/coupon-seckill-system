@@ -43,8 +43,7 @@ XLEN seckill:stream = 10000
 - 压测指令keepalive=true，减少tcp三次握手四次挥手次数
 - 维护一个channel，起一个协程，合并写Stream，减少redis的IOPS
 - 在linux环境下测试
-限流器 (Rate Limiter) ：
-- 使用 golang.org/x/time/rate 实现令牌桶算法。
+- 限流器 (Rate Limiter):使用 golang.org/x/time/rate 实现令牌桶算法。
 - 控制消费者退出
 - 调大XReadstream中count的数值
 

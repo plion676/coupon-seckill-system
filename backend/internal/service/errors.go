@@ -9,4 +9,5 @@ var (
 	ErrDuplicateOrder    = errors.New("duplicate order")
 	ErrCouponDataMissing = errors.New("coupon data missing")
 	ErrRedisUnavailable  = errors.New("redis unavailable")
+	ErrServerBusy        = errors.New("serve busy")
 )
