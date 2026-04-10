@@ -3,6 +3,7 @@ package main
 import (
 	mysql "coupon-seckill-system/internal/infra/mysql"
 	rds "coupon-seckill-system/internal/infra/redis"
+	"coupon-seckill-system/internal/middleware"
 	"coupon-seckill-system/internal/service"
 	"coupon-seckill-system/internal/transport/http/handler"
 	"net/http"
@@ -24,7 +25,13 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 
+	rateLimitManager := middleware.NewRateLimitManager()
+
+	r.Use(rateLimitManager.GlobalLimit())
+	seckillGroup := r.Group("/seckill")
+	seckillGroup.Use(rateLimitManager.UserLimit())
+
 	r.POST("/coupon/create", handler.CreateCoupon)
-	r.POST("/seckill", handler.SeckillHandler)
+	seckillGroup.POST("", handler.SeckillHandler)
 	r.Run(":8080")
 }

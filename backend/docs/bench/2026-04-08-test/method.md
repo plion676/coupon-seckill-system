@@ -20,6 +20,6 @@ mysql -uroot -p123456 practice -e "TRUNCATE TABLE orders; TRUNCATE TABLE coupons
 
 # 确保 user_id 不重复，生成 150,000 个请求
 rm -f targets_local.txt
-for i in {1..200000}; do
+for i in {1..600000}; do
   echo "POST http://localhost:8080/seckill?coupon_id=1&user_id=$i" >> targets_local.txt
 done
