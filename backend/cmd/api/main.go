@@ -25,11 +25,11 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 
-	rateLimitManager := middleware.NewRateLimitManager()
+	rateLimitManager := middleware.NewRateLimitManager(rds.RDB)
 
-	r.Use(rateLimitManager.GlobalLimit())
 	seckillGroup := r.Group("/seckill")
-	seckillGroup.Use(rateLimitManager.UserLimit())
+	seckillGroup.Use(rateLimitManager.GlobalLimit())
+	// seckillGroup.Use(rateLimitManager.UserLimit())
 
 	r.POST("/coupon/create", handler.CreateCoupon)
 	seckillGroup.POST("", handler.SeckillHandler)
