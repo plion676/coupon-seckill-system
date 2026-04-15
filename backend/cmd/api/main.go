@@ -29,7 +29,7 @@ func main() {
 
 	seckillGroup := r.Group("/seckill")
 	seckillGroup.Use(rateLimitManager.GlobalLimit())
-	// seckillGroup.Use(rateLimitManager.UserLimit())
+	seckillGroup.Use(rateLimitManager.UserLimit())
 
 	r.POST("/coupon/create", handler.CreateCoupon)
 	seckillGroup.POST("", handler.SeckillHandler)

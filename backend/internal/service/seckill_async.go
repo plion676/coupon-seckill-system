@@ -79,6 +79,6 @@ func sendToRedis(batch []SeckillMessage) {
 
 	_, err := pipe.Exec(ctx)
 	if err != nil {
-		fmt.Printf("Pipeline批量写入失败:", err)
+		fmt.Printf("Pipeline批量写入失败: %v\n", err)
 	}
 }

@@ -112,35 +112,35 @@ func (m *RateLimitManager) GlobalLimit() gin.HandlerFunc {
 	}
 }
 
-// func (m *RateLimitManager) UserLimit() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		couponID := c.Query("coupon_id")
-// 		userID := c.Query("user_id")
-// 		if couponID == "" || userID == "" {
-// 			c.JSON(400, gin.H{
-// 				"error": "缺少coupon_id/user_id参数"})
-// 			c.Abort()
-// 			return
-// 		}
+func (m *RateLimitManager) UserLimit() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		couponID := c.Query("coupon_id")
+		userID := c.Query("user_id")
+		if couponID == "" || userID == "" {
+			c.JSON(400, gin.H{
+				"error": "缺少coupon_id/user_id参数"})
+			c.Abort()
+			return
+		}
 
-// 		key := fmt.Sprintf("rate_limit:coupon:%s:user:%s", couponID, userID)
-// 		ok, _, err := m.tryConsume(key, 1, m.userConfig.Capacity, m.userConfig.Rate, 1*time.Hour)
-// 		if err != nil {
-// 			// Redis 故障时采取 Fail-Open 策略，记录日志并放行
-// 			fmt.Printf("UserLimit Redis error: %v\n", err)
-// 			c.Next()
-// 			return
-// 		}
+		key := fmt.Sprintf("rate_limit:coupon:%s:user:%s", couponID, userID)
+		ok, _, err := m.tryConsume(key, 1, m.userConfig.Capacity, m.userConfig.Rate, 1*time.Hour)
+		if err != nil {
+			// Redis 故障时采取 Fail-Open 策略，记录日志并放行
+			fmt.Printf("UserLimit Redis error: %v\n", err)
+			c.Next()
+			return
+		}
 
-// 		if !ok {
-// 			c.JSON(429, gin.H{
-// 				"error": "操作太频繁了，请歇一会吧"})
-// 			c.Abort()
-// 			return
-// 		}
-// 		c.Next()
-// 	}
-// }
+		if !ok {
+			c.JSON(429, gin.H{
+				"error": "操作太频繁了，请歇一会吧"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
 
 func (m *RateLimitManager) tryConsume(key string, numTokens int64, capacity, rate int64, expiration time.Duration) (bool, int64, error) {
 	now := time.Now().UnixMilli()
