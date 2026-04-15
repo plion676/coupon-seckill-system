@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	rds "coupon-seckill-system/internal/infra/redis"
-	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -29,13 +29,14 @@ func DispatchSeckillMessage(msg SeckillMessage) error {
 	case seckillChans[idx] <- msg:
 		return nil
 	default:
+		slog.Warn("seckill dispatch queue full", "module", "seckill_async", "coupon_id", msg.CouponID, "user_id", msg.UserID, "queue_index", idx, "queue_len", len(seckillChans[idx]), "queue_cap", cap(seckillChans[idx]))
 		return ErrServerBusy
 	}
 }
 func StartAsyncWriter() {
 	for i := 0; i < numChans; i++ {
 		ch := seckillChans[i]
-		go func(c chan SeckillMessage) {
+		go func(queueIndex int, c chan SeckillMessage) {
 			batchSize := 100
 			var batch []SeckillMessage
 			ticker := time.NewTicker(300 * time.Millisecond)
@@ -45,27 +46,28 @@ func StartAsyncWriter() {
 				case msg := <-c:
 					batch = append(batch, msg)
 					if len(batch) >= batchSize {
-						sendToRedis(batch)
+						sendToRedis(batch, queueIndex, "batch_full")
 						batch = batch[:0]
 					}
 				case <-ticker.C:
 					if len(batch) > 0 {
-						sendToRedis(batch)
+						sendToRedis(batch, queueIndex, "ticker")
 						batch = batch[:0]
 					}
 				}
 			}
-		}(ch)
+		}(i, ch)
 	}
 }
 
-func sendToRedis(batch []SeckillMessage) {
+func sendToRedis(batch []SeckillMessage, queueIndex int, trigger string) {
 	if len(batch) == 0 {
 		return
 	}
 
 	pipe := rds.RDB.Pipeline()
 	ctx := context.Background()
+	startedAt := time.Now()
 
 	for _, msg := range batch {
 		pipe.XAdd(ctx, &redis.XAddArgs{
@@ -79,6 +81,8 @@ func sendToRedis(batch []SeckillMessage) {
 
 	_, err := pipe.Exec(ctx)
 	if err != nil {
-		fmt.Printf("Pipeline批量写入失败: %v\n", err)
+		slog.Error("stream batch write failed", "module", "seckill_async", "stream", "seckill:stream", "queue_index", queueIndex, "trigger", trigger, "batch_size", len(batch), "duration_ms", time.Since(startedAt).Milliseconds(), "err", err)
+		return
 	}
+	slog.Debug("stream batch written", "module", "seckill_async", "stream", "seckill:stream", "queue_index", queueIndex, "trigger", trigger, "batch_size", len(batch), "duration_ms", time.Since(startedAt).Milliseconds())
 }

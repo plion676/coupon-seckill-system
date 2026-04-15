@@ -6,7 +6,7 @@ import (
 	rds "coupon-seckill-system/internal/infra/redis"
 	"coupon-seckill-system/internal/model"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -31,21 +31,24 @@ func StartReconciler(ctx context.Context, interval time.Duration) {
 	}
 
 	runOnce := func() {
+		startedAt := time.Now()
 		runCtx, cancel := context.WithTimeout(ctx, interval)
 		defer cancel()
 
+		slog.Info("reconcile run started", "module", "reconcile", "interval", interval.String())
 		summary, err := ReconcileOnce(runCtx)
 		if err != nil {
-			log.Printf("reconcile run failed: %v", err)
+			slog.Error("reconcile run failed", "module", "reconcile", "interval", interval.String(), "duration_ms", time.Since(startedAt).Milliseconds(), "err", err)
 			return
 		}
 
-		log.Printf(
-			"reconcile finished: coupons=%d compensated_orders=%d repaired_users=%d adjusted_stocks=%d",
-			summary.CouponsScanned,
-			summary.OrdersCompensated,
-			summary.RedisUsersRepaired,
-			summary.StocksAdjusted,
+		slog.Info("reconcile run finished",
+			"module", "reconcile",
+			"coupons_scanned", summary.CouponsScanned,
+			"orders_compensated", summary.OrdersCompensated,
+			"redis_users_repaired", summary.RedisUsersRepaired,
+			"stocks_adjusted", summary.StocksAdjusted,
+			"duration_ms", time.Since(startedAt).Milliseconds(),
 		)
 	}
 
@@ -90,7 +93,7 @@ func ReconcileOnce(ctx context.Context) (ReconcileSummary, error) {
 
 			couponSummary, err := reconcileCoupon(ctx, coupon)
 			if err != nil {
-				log.Printf("reconcile coupon %d failed: %v", coupon.ID, err)
+				slog.Error("reconcile coupon failed", "module", "reconcile", "coupon_id", coupon.ID, "err", err)
 				continue
 			}
 			summary.OrdersCompensated += couponSummary.OrdersCompensated
@@ -150,6 +153,19 @@ func reconcileCoupon(ctx context.Context, coupon model.Coupon) (couponReconcileS
 		return couponReconcileSummary{}, err
 	}
 
+	if len(missingOrders) > 0 || len(missingRedisUsers) > 0 || stockAdjusted {
+		slog.Warn("coupon reconciled with inconsistencies",
+			"module", "reconcile",
+			"coupon_id", coupon.ID,
+			"redis_users", len(redisUsers),
+			"mysql_orders", len(orderUsers),
+			"missing_orders", len(missingOrders),
+			"missing_redis_users", len(missingRedisUsers),
+			"expected_stock", expectedStock,
+			"stock_adjusted", stockAdjusted,
+		)
+	}
+
 	return couponReconcileSummary{
 		OrdersCompensated:  len(missingOrders),
 		RedisUsersRepaired: len(missingRedisUsers),
@@ -188,6 +204,7 @@ func loadRedisUsers(ctx context.Context, couponID int64) (map[int64]struct{}, er
 		for _, member := range members {
 			userID, err := strconv.ParseInt(member, 10, 64)
 			if err != nil {
+				slog.Warn("invalid redis user member", "module", "reconcile", "coupon_id", couponID, "member", member)
 				continue
 			}
 			users[userID] = struct{}{}
@@ -255,6 +272,9 @@ func repairRedisStock(ctx context.Context, couponID int64, expectedStock int) (b
 	currentStock, err := rds.RDB.Get(ctx, stockKey).Int()
 	if err == nil && currentStock == expectedStock {
 		return false, nil
+	}
+	if err != nil {
+		slog.Warn("redis stock read fallback to overwrite", "module", "reconcile", "coupon_id", couponID, "expected_stock", expectedStock, "err", err)
 	}
 
 	if err := rds.RDB.Set(ctx, stockKey, expectedStock, 0).Err(); err != nil {
