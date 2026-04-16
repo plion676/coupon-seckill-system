@@ -64,10 +64,9 @@ if newStock < 0 then
 end
 
 redis.call("SADD", usersKey, userId)
+redis.call("XADD", streamKey, "*", "coupon_id", couponId, "user_id", userId)
 return 0
 `)
-
-// redis.call("XADD", streamKey, "*", "coupon_id", couponId, "user_id", userId)
 
 func EvalSeckill(couponID, userID int64) (int, error) {
 	if rds.RDB == nil {

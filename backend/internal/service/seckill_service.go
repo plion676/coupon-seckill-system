@@ -15,12 +15,6 @@ func Seckill(couponID, userID int64) error {
 
 	switch code {
 	case 0:
-		var seckillMessage = SeckillMessage{CouponID: couponID, UserID: userID}
-		err = DispatchSeckillMessage(seckillMessage)
-		if err != nil {
-			slog.Warn("seckill dispatch failed", "module", "seckill_service", "coupon_id", couponID, "user_id", userID, "lua_code", code, "err", err)
-			return err
-		}
 		slog.Debug("seckill accepted", "module", "seckill_service", "coupon_id", couponID, "user_id", userID, "lua_code", code, "result", "accepted")
 		return nil
 	case 1:
@@ -40,5 +34,4 @@ func Seckill(couponID, userID int64) error {
 		slog.Warn("unexpected lua seckill result", "module", "seckill_service", "coupon_id", couponID, "user_id", userID, "lua_code", code, "result", "coupon_data_missing")
 		return ErrCouponDataMissing
 	}
-	return nil
 }
